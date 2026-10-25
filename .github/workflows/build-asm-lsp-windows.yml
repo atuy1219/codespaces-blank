@@ -33,7 +33,7 @@ jobs:
         run: |
           $exe = 'upstream/target/x86_64-pc-windows-msvc/release/asm-lsp.exe'
           if (!(Test-Path $exe)) { throw "Missing asm-lsp.exe" }
-          & $exe --version
+          & $exe version
           if ($LASTEXITCODE -ne 0) { throw "asm-lsp.exe version check failed" }
           New-Item -ItemType Directory -Force dist | Out-Null
           Copy-Item $exe dist/asm-lsp.exe
