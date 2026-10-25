@@ -1,0 +1,49 @@
+name: Build asm-lsp Windows x64
+
+on:
+  push:
+    branches:
+      - build/asm-lsp-win64
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout official asm-lsp v0.10.1
+        shell: pwsh
+        run: |
+          git clone --depth 1 --branch v0.10.1 https://github.com/bergercookie/asm-lsp.git upstream
+          git -C upstream rev-parse HEAD
+      - name: Verify Rust toolchain
+        shell: pwsh
+        run: |
+          rustc --version
+          cargo --version
+          rustup target add x86_64-pc-windows-msvc
+      - name: Compile native Windows MSVC binary
+        working-directory: upstream
+        shell: pwsh
+        run: cargo build --release --locked --package asm-lsp --target x86_64-pc-windows-msvc
+      - name: Check executable and package
+        shell: pwsh
+        run: |
+          $exe = 'upstream/target/x86_64-pc-windows-msvc/release/asm-lsp.exe'
+          if (!(Test-Path $exe)) { throw "Missing asm-lsp.exe" }
+          & $exe --version
+          if ($LASTEXITCODE -ne 0) { throw "asm-lsp.exe version check failed" }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item $exe dist/asm-lsp.exe
+          Copy-Item upstream/LICENSE dist/LICENSE
+          Get-FileHash dist/asm-lsp.exe -Algorithm SHA256 | Format-List
+      - name: Upload Windows binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: asm-lsp-x86_64-pc-windows-msvc
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 6
